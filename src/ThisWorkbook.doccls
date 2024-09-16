@@ -1,0 +1,6 @@
+﻿Option Explicit
+
+Private Sub Workbook_Open()
+    ActiveWindow.WindowState = xlMaximized
+    Call Sub_Main
+End Sub

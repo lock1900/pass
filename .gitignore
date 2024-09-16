@@ -1,0 +1,14 @@
+# desktop.iniは除外 
+desktop.ini
+
+# シートモジュールとブックモジュールのソースは除外
+*.doccls
+*.frx
+
+# 対象モジュール
+!ThisWorkbook.doccls
+# !sh_main.doccls
+# !sh_hinagata.doccls
+
+# 古いバージョンは対象外
+old*
