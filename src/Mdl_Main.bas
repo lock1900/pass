@@ -3,14 +3,18 @@ Option Explicit
 Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
 Private Declare PtrSafe Function GetWindowPlacement _
     Lib "user32" _
-    (ByVal hwnd As Long _
+    (ByVal hWnd As Long _
     , lpwndpl As WINDOWPLACEMENT) As Long
 Private Declare PtrSafe Function SetWindowPlacement _
     Lib "user32" _
-    (ByVal hwnd As Long _
+    (ByVal hWnd As Long _
     , lpwndpl As WINDOWPLACEMENT) As Long
 Private Declare PtrSafe Function GetForegroundWindow _
     Lib "user32" () As Long
+Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
+    (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
+Private Declare PtrSafe Sub SetForegroundWindow Lib "user32" (ByVal hWnd As Long)
+
 Private Type POINTAPI
     x As Long
     y As Long
@@ -29,6 +33,7 @@ Private Type WINDOWPLACEMENT
     ptMaxPosition As POINTAPI
     rcNormalPosition As RECT
 End Type
+Public uiAuto As CUIAutomation
 Sub Sub_Main()
     Dim lngHeight As Long
     Dim lngWidth As Long
@@ -46,21 +51,9 @@ Sub Sub_Main()
 
         strパス = rng.Value
         Call Sub_ウィンドウ配置メイン(str名前定義, strパス, lngWidth, lngHeight)
+        
     Next idx
-'    For idx = 1 To 4
-'        Set rng = Sh_Main.Cells(idx, 2)
-''        str名前定義 = rng.Name.Name
-'
-'        strパス = rng.Value
-'        CreateObject("Wscript.Shell").Run strパス
-'    Next idx
-'    For idx = 1 To 4
-'        Set rng = Sh_Main.Cells(idx, 2)
-'        str名前定義 = rng.Name.Name
-'
-'        strパス = rng.Value
-'        Call Sub_ウィンドウ配置メイン(str名前定義, strパス, lngWidth, lngHeight)
-'    Next idx
+
 End Sub
 Sub Sub_ウィンドウ配置メイン(ByVal str名前定義 As String, ByVal strパス As String, ByVal lngWidth As Long, ByVal lngHeight As Long)
     Dim lngTop As Long
@@ -89,8 +82,13 @@ Sub Sub_ウィンドウ配置メイン(ByVal str名前定義 As String, ByVal strパス As Strin
 End Sub
 Sub Sub_ウィンドウ配置(ByVal FPath As String, ByVal lngTop As Long, ByVal lngLeft As Long, ByVal lngWidth As Long, ByVal lngHeight As Long)
     CreateObject("Wscript.Shell").Run FPath
-    Application.Wait Now() + TimeValue("0:00:05")
-
+    DoEvents
+    Application.Wait Now() + TimeValue("0:00:03")
+    
+    Dim str対象パス As String
+    str対象パス = Mid(FPath, InStrRev(FPath, "\") + 1)
+    Call searchWin(str対象パス)
+    
     'ウィンドウハンドルの取得
     Dim myHwnd As Long
     myHwnd = GetForegroundWindow()
@@ -108,4 +106,31 @@ Sub Sub_ウィンドウ配置(ByVal FPath As String, ByVal lngTop As Long, ByVal lngLef
     End With
     SetWindowPlacement myHwnd, myWindowPlacement
 End Sub
-
+Sub searchWin(ByVal title As String)
+    If uiAuto Is Nothing Then
+        Set uiAuto = New CUIAutomation
+    End If
+    
+    Dim elmDeskTop As IUIAutomationElement
+    Set elmDeskTop = uiAuto.GetRootElement
+    
+    Dim condIE As IUIAutomationCondition
+    Dim aryIEControls As IUIAutomationElementArray
+    
+    Set condIE = uiAuto.CreatePropertyCondition(UIA_ControlTypePropertyId, UIA_WindowControlTypeId)
+    Set aryIEControls = elmDeskTop.FindAll(TreeScope_Children, condIE)
+    
+    Dim i As Long
+    Dim hdle As Variant
+    Dim elm1 As IUIAutomationElement
+    Dim cnd1 As IUIAutomationCondition
+    
+    For i = 0 To aryIEControls.Length - 1
+        DoEvents
+        
+        If InStr(aryIEControls.GetElement(i).CurrentName, title) > 0 Then
+            aryIEControls.GetElement(i).SetFocus
+            Exit For
+        End If
+    Next i
+End Sub
